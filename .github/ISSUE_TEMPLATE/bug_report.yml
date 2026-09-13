@@ -1,0 +1,17 @@
+name: Report a problem
+description: Something is not working in TIDAL RPC
+title: "TIDAL RPC: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: What went wrong? Include the steps if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: App report (optional)
+      description: In the app, choose Report a problem → Copy report, then paste it here.
+      render: text

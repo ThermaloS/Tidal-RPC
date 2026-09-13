@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources/App.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
+    <Product>TIDAL RPC</Product>
+    <Description>Share your TIDAL playback on Discord.</Description>
+    <ReleaseSettingsFile Condition="'$(ReleaseSettingsFile)' == ''">release-settings.json</ReleaseSettingsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TidalRpc.Core/TidalRpc.Core.csproj" />
+    <EmbeddedResource Include="$(ReleaseSettingsFile)" LogicalName="TidalRpc.ReleaseSettings.json" />
+    <EmbeddedResource Include="Resources/App.ico" LogicalName="TidalRpc.App.ico" />
+    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>
