@@ -1,8 +1,14 @@
-# TIDAL RPC
+# TIDAL Discord Rich Presence
 
 Show what you're playing on TIDAL in your Discord profile, with album artwork and a link to the song.
 
-The first release is still in testing.
+## Example Screenshots
+
+**Client**
+
+
+<img width="632" height="722" alt="Screenshot 2026-09-13 184053" src="https://github.com/user-attachments/assets/ed2a16f2-a67a-4832-ab22-fb7c3b6fbcae" />
+
 
 ## Getting started
 
