@@ -60,6 +60,10 @@ internal sealed class TrayApplication : ApplicationContext
     private SettingsForm? form;
     private PlaybackSnapshot? latest;
     private bool disposed;
+    private readonly CancellationTokenSource updateLifetime = new();
+    private bool checkingUpdate;
+    private DateTimeOffset nextUpdateCheck = DateTimeOffset.UtcNow;
+    private Version? notifiedVersion;
     private string playbackStatus = "Waiting for TIDAL";
     private string? discordStatus = "Connecting to Discord…";
     private string? settingsError;
@@ -72,6 +76,7 @@ internal sealed class TrayApplication : ApplicationContext
         catch (Exception ex) { settings = new(Enabled: false); settingsError = "Couldn't load preferences. Change a setting to save them again."; DebugConsole.Write("Settings", $"Load failed: {ex.GetType().Name}"); }
         var menu = new ContextMenuStrip();
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
+        menu.Items.Add("Check for updates", null, async (_, _) => await CheckForUpdatesAsync(true));
         enabledItem = new ToolStripMenuItem("Share on Discord") { Checked = settings.Enabled, CheckOnClick = true };
         enabledItem.Click += (_, _) =>
         {
@@ -94,6 +99,7 @@ internal sealed class TrayApplication : ApplicationContext
         {
             controller?.Tick();
             playback.Poll();
+            if (DateTimeOffset.UtcNow >= nextUpdateCheck) _ = CheckForUpdatesAsync(false);
         };
         timer.Start();
         _ = StartPlaybackAsync();
@@ -147,16 +153,45 @@ internal sealed class TrayApplication : ApplicationContext
     private void ShowSettings()
     {
         if (form is { Visible: false }) { form.Dispose(); form = null; }
-        if (form is null || form.IsDisposed) { form = new(settings); form.Saved += Apply; form.ReportRequested += ShowReport; }
+        if (form is null || form.IsDisposed) { form = new(settings); form.Saved += Apply; form.ReportRequested += ShowReport; form.UpdateRequested += () => _ = CheckForUpdatesAsync(true); }
         UpdateStatus(); form.Show(); form.WindowState = FormWindowState.Normal; form.Activate();
     }
     private void ShowReport() { using var report = new ReportForm(settings, latest); report.ShowDialog(form is { Visible: true } ? form : null); }
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (checkingUpdate || disposed) return;
+        checkingUpdate = true;
+        nextUpdateCheck = DateTimeOffset.UtcNow.AddHours(24);
+        try
+        {
+            var repository = ReleaseConfiguration.Repository ?? throw new InvalidOperationException();
+            var version = await UpdateChecker.CheckAsync(repository, ReleaseConfiguration.Version, updateLifetime.Token);
+            if (disposed) return;
+            if (version is null)
+            {
+                if (manual) MessageBox.Show("You're up to date.", "TIDAL RPC");
+                return;
+            }
+            if (!manual && version == notifiedVersion) return;
+            notifiedVersion = version;
+            if (MessageBox.Show($"TIDAL RPC {version} is available. Open the download page?", "Update available",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(new Uri(repository, "releases/latest").AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            DebugConsole.Write("Updates", $"Check failed: {ex.GetType().Name}");
+            if (manual && !disposed) MessageBox.Show("Couldn't check for updates. Try again later.", "TIDAL RPC");
+        }
+        finally { checkingUpdate = false; }
+    }
     protected override void ExitThreadCore() { Dispose(); base.ExitThreadCore(); }
     protected override void Dispose(bool disposing)
     {
         if (disposing && !disposed)
         {
             disposed = true; timer.Stop(); timer.Dispose(); playback.Dispose(); controller?.Dispose(); publisher?.Dispose();
+            updateLifetime.Cancel(); updateLifetime.Dispose();
             tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); form?.Dispose(); http.Dispose();
         }
         base.Dispose(disposing);

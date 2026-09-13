@@ -16,6 +16,8 @@ Double-click the tray icon to open Settings. You can change the appearance, choo
 
 Pause for five seconds and your Discord activity clears. Turn off **Share on Discord** whenever you want to stop sharing.
 
+The app checks for updates on launch and daily. When prompted, open the download page, download the new ZIP, exit TIDAL RPC, and replace your old copy. You can also choose **Check for updates** in Settings.
+
 ## Having trouble?
 
 Make sure Discord's activity sharing is enabled. If something still isn't working, choose **Report a problem** in Settings or the tray menu. You can review the report before submitting it on GitHub.
