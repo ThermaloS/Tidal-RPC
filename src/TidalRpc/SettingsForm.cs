@@ -17,6 +17,7 @@ public sealed class SettingsForm : Form
     private bool syncing;
     public event Action<AppSettings>? Saved;
     public event Action? ReportRequested;
+    public event Action? UpdateRequested;
     public SettingsForm(AppSettings settings)
     {
         lastSaved = settings; Text = "TIDAL RPC";
@@ -39,6 +40,8 @@ public sealed class SettingsForm : Form
         var app = Section("PREFERENCES"); content.Controls.Add(app);
         theme.Items.AddRange(["Dark", "Light", "Follow Windows"]); AddRow(app, "Appearance", theme); AddRow(app, "Country", country);
         AddRow(app, "Start with Windows", startup); AddRow(app, "Open settings on launch", openOnLaunch);
+        var updates = new Button { Text = "Check for updates", AutoSize = true, Cursor = Cursors.Hand };
+        updates.Click += (_, _) => UpdateRequested?.Invoke(); AddRow(app, "Updates", updates);
         var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Tag = "background", Padding = new Padding(0, 12, 0, 0), Margin = Padding.Empty };
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var report = new Button { Name = "Report", Text = "Report a problem", AutoSize = true, Padding = new Padding(10, 3, 10, 3), Cursor = Cursors.Hand, Margin = Padding.Empty };
