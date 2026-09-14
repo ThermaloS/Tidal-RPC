@@ -98,13 +98,6 @@ public sealed class TidalNamedPipeClient : INamedPipeClient
         if ((string?)payload["cmd"] == "SET_ACTIVITY" && payload["args"]?["activity"] is JObject activity)
         {
             activity["name"] = "TIDAL";
-            // Keep all credited artists in the card's state. In Artist status mode,
-            // route the member list through name so it only shows the first artist.
-            if ((int?)activity["status_display_type"] == 1 && (string?)activity["state"] is { Length: > 0 } artists)
-            {
-                activity["name"] = artists.Split(DiscordPresencePublisher.ArtistSeparator, StringSplitOptions.None)[0];
-                activity["status_display_type"] = 0;
-            }
             frame.Message = payload.ToString(Formatting.None);
         }
         return frame;
