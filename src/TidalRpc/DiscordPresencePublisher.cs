@@ -35,7 +35,7 @@ public sealed class DiscordPresencePublisher : IPresencePublisher
             Type = ActivityType.Listening,
             StatusDisplay = settings.StatusText switch { StatusTextMode.Song => StatusDisplayType.Details, StatusTextMode.AppName => StatusDisplayType.Name, _ => StatusDisplayType.State },
             Details = Clip(track.Title),
-            State = Clip(string.IsNullOrWhiteSpace(track.Artist) ? "TIDAL" : track.Artist)
+            State = FormatArtists(track, metadata)
         };
         var album = !string.IsNullOrWhiteSpace(track.Album) ? track.Album : metadata?.Album;
         var artwork = settings.ShowArtwork && MetadataRules.IsArtworkUrl(metadata?.ArtworkUrl) ? metadata!.ArtworkUrl : null;
@@ -49,6 +49,17 @@ public sealed class DiscordPresencePublisher : IPresencePublisher
             presence.Timestamps = new Timestamps(start, start + duration);
         }
         return presence;
+    }
+    // Use an explicit separator rather than commas: artist names can contain commas.
+    internal const string ArtistSeparator = " • ";
+    private static string FormatArtists(PlaybackSnapshot track, TrackMetadata? metadata)
+    {
+        var artists = (metadata?.Artists ?? [])
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name.Trim().Replace(ArtistSeparator, " "))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(3).ToArray();
+        return Clip(artists.Length > 0 ? string.Join(ArtistSeparator, artists)
+            : string.IsNullOrWhiteSpace(track.Artist) ? "TIDAL" : track.Artist);
     }
     private static string Clip(string text)
     {
