@@ -50,13 +50,12 @@ public sealed class DiscordPresencePublisher : IPresencePublisher
         }
         return presence;
     }
-    // Use an explicit separator rather than commas: artist names can contain commas.
-    internal const string ArtistSeparator = " • ";
+    private const string ArtistSeparator = ", ";
     private static string FormatArtists(PlaybackSnapshot track, TrackMetadata? metadata)
     {
         var artists = (metadata?.Artists ?? [])
             .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name.Trim().Replace(ArtistSeparator, " "))
+            .Select(name => name.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(3).ToArray();
         return Clip(artists.Length > 0 ? string.Join(ArtistSeparator, artists)
             : string.IsNullOrWhiteSpace(track.Artist) ? "TIDAL" : track.Artist);
