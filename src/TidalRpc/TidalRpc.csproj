@@ -5,7 +5,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Resources/App.ico</ApplicationIcon>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
+    <AssemblyName>TidalRPC</AssemblyName>
+    <RootNamespace>TidalRpc</RootNamespace>
     <Product>TIDAL RPC</Product>
     <Description>Share your TIDAL playback on Discord.</Description>
     <ReleaseSettingsFile Condition="'$(ReleaseSettingsFile)' == ''">release-settings.json</ReleaseSettingsFile>

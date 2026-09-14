@@ -6,7 +6,7 @@ public sealed record PlaybackSnapshot(string Source, string Title, string Artist
 {
     public string Key => $"{Source}\n{Title}\n{Artist}\n{Album}";
 }
-public sealed record TrackMetadata(string Album, string? ArtworkUrl, string? TrackUrl);
+public sealed record TrackMetadata(string Album, string? ArtworkUrl, string? TrackUrl, string[]? Artists = null);
 public interface IPlaybackProvider : IDisposable
 {
     event Action<PlaybackSnapshot?>? Changed;

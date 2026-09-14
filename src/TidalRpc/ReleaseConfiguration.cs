@@ -7,7 +7,7 @@ namespace TidalRpc;
 public sealed record ReleaseSettings(string RepositoryUrl = "", string MetadataServiceUrl = "");
 public static class ReleaseConfiguration
 {
-    public static string Version => typeof(ReleaseConfiguration).Assembly.GetName().Version?.ToString(3) ?? "0.2.0";
+    public static string Version => typeof(ReleaseConfiguration).Assembly.GetName().Version?.ToString(3) ?? "0.2.1";
     public static ReleaseSettings Settings { get; } = Load();
     private static ReleaseSettings Load()
     {
