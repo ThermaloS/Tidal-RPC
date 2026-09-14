@@ -12,9 +12,10 @@ Show what you're playing on TIDAL in your Discord profile, with album artwork an
 
 ## Getting started
 
-1. Extract the app ZIP.
-2. Open TIDAL and Discord on your PC.
-3. Run `TidalRpc.exe` and play something.
+1. Download the .EXE
+2. Run both Discord and Tidal on the same computer.
+3. Play a song from Tidal
+4. **Profit?**
 
 Requires Windows 10 (version 2004 or later) or Windows 11, on an x64 PC. Works with the TIDAL desktop app, not browser, phone, or TIDAL Connect playback.
 
@@ -22,7 +23,7 @@ Double-click the tray icon to open Settings. You can change the appearance, choo
 
 Pause for five seconds and your Discord activity clears. Turn off **Share on Discord** whenever you want to stop sharing.
 
-The app checks for updates on launch and daily. When prompted, open the download page, download the new ZIP, exit TIDAL RPC, and replace your old copy. You can also choose **Check for updates** in Settings.
+The app checks for updates on launch and daily. When prompted, open the download page, download the new EXE, exit TIDAL RPC, and replace your old copy. You can also choose **Check for updates** in Settings.
 
 ## Having trouble?
 
