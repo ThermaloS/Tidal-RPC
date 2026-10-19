@@ -30,7 +30,9 @@
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
     <ProjectReference Include="../TidalRpc.Core/TidalRpc.Core.csproj" />
     <Compile Include="../TidalRpc/ReleaseConfiguration.cs" Link="ReleaseConfiguration.cs" />
+    <Compile Include="../TidalRpc/IssueReport.cs" Link="IssueReport.cs" />
     <EmbeddedResource Include="$(ReleaseSettingsFile)" LogicalName="TidalRpc.ReleaseSettings.json" />
     <EmbeddedResource Include="NowPlaying.js" LogicalName="TidalRpc.NowPlaying.js" />
+    <EmbeddedResource Include="MenuBarIcon.png" LogicalName="TidalRpc.MenuBarIcon.png" />
   </ItemGroup>
 </Project>
