@@ -12,7 +12,7 @@ public static class IssueReport
         var report = new StringBuilder();
         report.AppendLine("## What happened").AppendLine().AppendLine(Clean(description, 1000)).AppendLine();
         report.AppendLine("## Diagnostics").AppendLine().AppendLine("```text");
-        report.AppendLine($"TIDAL RPC {ReleaseConfiguration.Version} | Windows {Environment.OSVersion.Version} | {RuntimeInformation.ProcessArchitecture}");
+        report.AppendLine($"TIDAL RPC {ReleaseConfiguration.Version} | {(OperatingSystem.IsMacOS() ? "macOS" : "Windows")} {Environment.OSVersion.Version} | {RuntimeInformation.ProcessArchitecture}");
         report.AppendLine($"Sharing: {settings.Enabled}; playback: {track?.Status.ToString() ?? "Not detected"}; country: {settings.Country}");
         report.AppendLine($"Artwork: {settings.ShowArtwork}; timer: {settings.ShowPlaybackTime}; link: {settings.ShowTidalButton}; status: {settings.StatusText}");
         if (includeSong && track is not null) report.AppendLine($"Current song: {Clean(track.Title, 100)} / {Clean(track.Artist, 100)}");

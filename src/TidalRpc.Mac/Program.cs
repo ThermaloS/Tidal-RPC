@@ -101,7 +101,7 @@ internal static partial class Program
             using var interrupt = PosixSignalRegistration.Create(PosixSignal.SIGINT, context => { context.Cancel = true; loop.Complete(); });
             using var host = new MacHost(loop);
             loop.Post(_ => host.Start(), null);
-            loop.Run();
+            loop.Run(MenuBar.Pump);
         }
         return 0;
     }
@@ -131,17 +131,24 @@ internal sealed class EventLoop : SynchronizationContext
     }
     public override SynchronizationContext CreateCopy() => this;
     public void Complete() => queue.CompleteAdding();
-    public void Run()
+    // The menu bar needs AppKit events pumped on this same thread, so when the queue is empty the loop
+    // calls whenIdle (which waits briefly for AppKit events) instead of blocking on the queue.
+    public void Run(Action whenIdle)
     {
-        foreach (var (callback, state) in queue.GetConsumingEnumerable())
+        while (true)
         {
-            try { callback(state); }
-            catch (Exception ex) { MacHost.Log($"Unexpected error: {ex.GetType().Name}"); }
+            while (queue.TryTake(out var item))
+            {
+                try { item.Callback(item.State); }
+                catch (Exception ex) { MacHost.Log($"Unexpected error: {ex.GetType().Name}"); }
+            }
+            if (queue.IsCompleted) break;
+            whenIdle();
         }
     }
 }
 
-internal sealed class MacHost(SynchronizationContext context) : IDisposable
+internal sealed class MacHost(EventLoop context) : IDisposable
 {
     private readonly MacPlaybackProvider playback = new();
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(15) };
@@ -157,6 +164,9 @@ internal sealed class MacHost(SynchronizationContext context) : IDisposable
     private DateTimeOffset nextUpdateCheck = DateTimeOffset.UtcNow;
     private Version? notifiedVersion;
     private string? discordStatus = "", playbackStatus = "";
+    // Problems shown in the menu bar dropdown. Null means nothing to report.
+    private string? discordIssue, mediaIssue;
+    private MenuBar? menu;
     private static string? lastLog;
 
     // Status only: song titles and artists stay out of the log.
@@ -173,10 +183,12 @@ internal sealed class MacHost(SynchronizationContext context) : IDisposable
         {
             if (latest?.Key != track?.Key || latest?.Status != track?.Status)
                 DebugConsole.Write("Playback", track is null ? "TIDAL session removed" : $"{track.Status}: {track.Title} — {track.Artist} | {track.Album}");
+            mediaIssue = null;
             latest = track; controller?.Update(track);
         };
-        playback.Diagnostic += text => { DebugConsole.Write("Playback", text); Log(text); };
+        playback.Diagnostic += text => { DebugConsole.Write("Playback", text); Log(text); mediaIssue = text; };
         _ = playback.StartAsync();
+        menu = new MenuBar(MenuState, ReportProblem, context.Complete);
         timer = new Timer(_ => context.Post(_ => Tick(), null), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         Log($"TIDAL RPC {ReleaseConfiguration.Version} started");
     }
@@ -209,13 +221,14 @@ internal sealed class MacHost(SynchronizationContext context) : IDisposable
     private void Configure()
     {
         controller?.Dispose(); publisher?.Dispose();
+        discordIssue = null;
         publisher = new(settings.DiscordApplicationId);
         publisher.SetSettings(settings);
         var active = publisher;
         publisher.Status += text => context.Post(_ =>
         {
             if (disposed || !ReferenceEquals(publisher, active) || discordStatus == text) return;
-            discordStatus = text; Log(text ?? "Discord connected");
+            discordStatus = text; discordIssue = text; Log(text ?? "Discord connected");
         }, null);
         var endpoint = ReleaseConfiguration.MetadataService;
         if (endpoint is null) Log("This build isn't connected yet.");
@@ -266,8 +279,48 @@ internal sealed class MacHost(SynchronizationContext context) : IDisposable
     {
         if (disposed) return;
         disposed = true;
-        timer?.Dispose(); playback.Dispose(); controller?.Dispose(); publisher?.Dispose();
+        timer?.Dispose(); menu?.Dispose(); playback.Dispose(); controller?.Dispose(); publisher?.Dispose();
         updateLifetime.Cancel(); updateLifetime.Dispose(); http.Dispose();
         Log("TIDAL RPC stopped");
+    }
+
+    // Called each time the menu bar dropdown opens, so it always shows the current song and status.
+    private (string NowPlaying, string Status) MenuState() => (NowPlayingLine(), StatusLine());
+
+    private string NowPlayingLine() => latest switch
+    {
+        { Status: PlaybackStatus.Playing } track => Shorten($"Playing: {track.Title} — {track.Artist}"),
+        { Status: PlaybackStatus.Paused } track => Shorten($"Paused: {track.Title} — {track.Artist}"),
+        _ => "Nothing playing in TIDAL"
+    };
+
+    private string StatusLine()
+    {
+        if (!settings.Enabled) return "Sharing is off";
+        if (discordIssue is not null) return discordIssue;
+        if (mediaIssue is not null) return mediaIssue;
+        if (playbackStatus is "This track is unavailable." or "Couldn't load this track. Retrying…") return playbackStatus;
+        return "Sharing on Discord";
+    }
+
+    private static string Shorten(string text) => text.Length > 70 ? text[..69] + "…" : text;
+
+    // Opens a prefilled GitHub issue with diagnostics. Song titles stay out unless the user adds them.
+    private void ReportProblem()
+    {
+        try
+        {
+            var repository = ReleaseConfiguration.Repository ?? throw new InvalidOperationException("No repository is configured.");
+            var report = IssueReport.Create(settings, latest, DebugConsole.Snapshot().Text);
+            using (var pbcopy = Process.Start(new ProcessStartInfo("/usr/bin/pbcopy") { RedirectStandardInput = true, UseShellExecute = false })!)
+            {
+                pbcopy.StandardInput.Write(report);
+                pbcopy.StandardInput.Close();
+                pbcopy.WaitForExit();
+            }
+            var url = IssueReport.CreateIssueUri(repository, report);
+            using var open = Process.Start(new ProcessStartInfo("/usr/bin/open") { UseShellExecute = false, ArgumentList = { url.AbsoluteUri } });
+        }
+        catch (Exception ex) { Log($"Couldn't open the report: {ex.GetType().Name}"); }
     }
 }
