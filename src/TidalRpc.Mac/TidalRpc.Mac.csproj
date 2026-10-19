@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
+    <Version>0.2.1</Version>
+    <AssemblyName>tidal-rpc</AssemblyName>
+    <RootNamespace>TidalRpc</RootNamespace>
+    <Product>TIDAL RPC</Product>
+    <Description>Share your TIDAL playback on Discord.</Description>
+    <!-- Same release settings as Windows, so both apps use the same metadata service and repository. -->
+    <ReleaseSettingsFile Condition="'$(ReleaseSettingsFile)' == ''">../TidalRpc/release-settings.json</ReleaseSettingsFile>
+    <!-- Low footprint: one small workstation heap, no background GC thread, and precompiled code
+         without tiered re-JIT, which halves startup CPU and keeps the app near zero CPU while idle. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredCompilation>false</TieredCompilation>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <!-- Partial trimming removes unused framework code but keeps DiscordRPC and Newtonsoft.Json whole,
+         so their reflection keeps working; IL2104 only reports that those two aren't trim-annotated. -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <NoWarn>$(NoWarn);IL2104</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+    <ProjectReference Include="../TidalRpc.Core/TidalRpc.Core.csproj" />
+    <Compile Include="../TidalRpc/ReleaseConfiguration.cs" Link="ReleaseConfiguration.cs" />
+    <EmbeddedResource Include="$(ReleaseSettingsFile)" LogicalName="TidalRpc.ReleaseSettings.json" />
+    <EmbeddedResource Include="NowPlaying.js" LogicalName="TidalRpc.NowPlaying.js" />
+  </ItemGroup>
+</Project>

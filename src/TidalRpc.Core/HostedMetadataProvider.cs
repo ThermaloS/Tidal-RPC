@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TidalRpc;
 
@@ -23,7 +24,7 @@ public sealed class HostedMetadataProvider(HttpClient http, Uri baseUri, string 
         static string Bound(string text) => text[..Math.Min(text.Length, 256)];
         var payload = new MetadataRequest(Bound(track.Title), Bound(track.Artist), Bound(track.Album), country,
             track.Duration is { } duration && duration > TimeSpan.Zero ? duration.TotalSeconds : null);
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "v1/metadata/resolve")) { Content = JsonContent.Create(payload) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "v1/metadata/resolve")) { Content = JsonContent.Create(payload, MetadataJson.Default.MetadataRequest) };
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestToken);
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
@@ -42,7 +43,7 @@ public sealed class HostedMetadataProvider(HttpClient http, Uri baseUri, string 
             if (bytes.Length + read > 65536) throw new InvalidDataException("Metadata response was too large.");
             bytes.Write(buffer, 0, read);
         }
-        var result = JsonSerializer.Deserialize<TrackMetadata>(bytes.ToArray(), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var result = JsonSerializer.Deserialize(bytes.ToArray(), MetadataJson.Default.TrackMetadata);
         if (result is not null && MetadataRules.IsArtworkUrl(result.ArtworkUrl) && MetadataRules.IsTidalUrl(result.TrackUrl)
             && !string.IsNullOrWhiteSpace(result.Album))
         {
@@ -53,7 +54,13 @@ public sealed class HostedMetadataProvider(HttpClient http, Uri baseUri, string 
     }
 }
 
-internal sealed class UnavailableMetadataProvider : ITrackMetadataProvider
+// Generated serializers keep the metadata contract working in trimmed builds.
+[JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(MetadataRequest))]
+[JsonSerializable(typeof(TrackMetadata))]
+internal sealed partial class MetadataJson : JsonSerializerContext;
+
+public sealed class UnavailableMetadataProvider : ITrackMetadataProvider
 {
     public Task<TrackMetadata?> ResolveAsync(PlaybackSnapshot track, CancellationToken cancellationToken) => Task.FromResult<TrackMetadata?>(null);
 }

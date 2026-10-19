@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace TidalRpc;
@@ -12,7 +13,7 @@ public static class ReleaseConfiguration
     private static ReleaseSettings Load()
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("TidalRpc.ReleaseSettings.json");
-        return stream is null ? new() : JsonSerializer.Deserialize<ReleaseSettings>(stream) ?? new();
+        return stream is null ? new() : JsonSerializer.Deserialize(stream, ReleaseSettingsJson.Default.ReleaseSettings) ?? new();
     }
     public static Uri? Repository => RepositoryUri(Settings.RepositoryUrl);
     public static Uri? MetadataService => ServiceUri(Settings.MetadataServiceUrl);
@@ -25,3 +26,6 @@ public static class ReleaseConfiguration
         && uri.Scheme == "https" && uri.UserInfo.Length == 0 && uri.Query.Length == 0 && uri.Fragment.Length == 0
         ? new Uri(uri.AbsoluteUri.TrimEnd('/') + "/") : null;
 }
+
+[JsonSerializable(typeof(ReleaseSettings))]
+internal sealed partial class ReleaseSettingsJson : JsonSerializerContext;

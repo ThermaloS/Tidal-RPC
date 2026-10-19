@@ -16,7 +16,5 @@
     <ProjectReference Include="../TidalRpc.Core/TidalRpc.Core.csproj" />
     <EmbeddedResource Include="$(ReleaseSettingsFile)" LogicalName="TidalRpc.ReleaseSettings.json" />
     <EmbeddedResource Include="Resources/App.ico" LogicalName="TidalRpc.App.ico" />
-    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>
