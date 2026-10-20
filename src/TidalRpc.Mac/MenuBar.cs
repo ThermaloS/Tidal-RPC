@@ -20,14 +20,17 @@ internal sealed unsafe partial class MenuBar : IDisposable
     private readonly Native.ActionCallback menuOpening;
     private readonly Native.ActionCallback reportCallback;
     private readonly Native.ActionCallback quitCallback;
+    private readonly Native.ActionCallback removeCallback;
     private readonly Action reportProblem;
     private readonly Action quit;
+    private readonly Action removeFromLogin;
 
-    public MenuBar(Func<(string NowPlaying, string Status)> snapshot, Action reportProblem, Action quit)
+    public MenuBar(Func<(string NowPlaying, string Status)> snapshot, Action reportProblem, Action quit, Action removeFromLogin)
     {
         this.snapshot = snapshot;
         this.reportProblem = reportProblem;
         this.quit = quit;
+        this.removeFromLogin = removeFromLogin;
 
         var app = Native.Send(Cls("NSApplication"), Sel("sharedApplication"));
         // Accessory: a menu bar item only, with no Dock icon.
@@ -37,6 +40,7 @@ internal sealed unsafe partial class MenuBar : IDisposable
         menuOpening = (_, _, _) => Guard(Refresh);
         reportCallback = (_, _, _) => Guard(this.reportProblem);
         quitCallback = (_, _, _) => Guard(this.quit);
+        removeCallback = (_, _, _) => Guard(this.removeFromLogin);
         target = CreateTarget();
 
         var menu = Native.Send(Native.Send(Cls("NSMenu"), Sel("alloc")), Sel("init"));
@@ -47,7 +51,8 @@ internal sealed unsafe partial class MenuBar : IDisposable
         Native.Send(menu, Sel("addItem:"), statusLineItem);
         Native.Send(menu, Sel("addItem:"), Native.Send(Cls("NSMenuItem"), Sel("separatorItem")));
         Native.Send(menu, Sel("addItem:"), MenuItem("Report a problem…", Sel("reportProblem:"), target));
-        Native.Send(menu, Sel("addItem:"), MenuItem("Quit TIDAL RPC", Sel("quitTidalRpc:"), target));
+        Native.Send(menu, Sel("addItem:"), MenuItem("Quit for now", Sel("quitTidalRpc:"), target));
+        Native.Send(menu, Sel("addItem:"), MenuItem("Stop and remove from login", Sel("removeFromLogin:"), target));
 
         statusItem = Native.SendDouble(Native.Send(Cls("NSStatusBar"), Sel("systemStatusBar")), Sel("statusItemWithLength:"), -1);
         Native.Send(statusItem, Sel("retain"));
@@ -101,6 +106,7 @@ internal sealed unsafe partial class MenuBar : IDisposable
         Native.class_addMethod(cls, Sel("menuNeedsUpdate:"), Marshal.GetFunctionPointerForDelegate(menuOpening), "v@:@");
         Native.class_addMethod(cls, Sel("reportProblem:"), Marshal.GetFunctionPointerForDelegate(reportCallback), "v@:@");
         Native.class_addMethod(cls, Sel("quitTidalRpc:"), Marshal.GetFunctionPointerForDelegate(quitCallback), "v@:@");
+        Native.class_addMethod(cls, Sel("removeFromLogin:"), Marshal.GetFunctionPointerForDelegate(removeCallback), "v@:@");
         Native.objc_registerClassPair(cls);
         return Native.Send(Native.Send(cls, Sel("alloc")), Sel("init"));
     }
