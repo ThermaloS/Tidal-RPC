@@ -33,7 +33,7 @@ public static partial class LaunchAgent
     {
         var executable = Environment.ProcessPath ?? throw new InvalidOperationException("Couldn't find this app's location.");
         if (executable.Contains("/AppTranslocation/", StringComparison.Ordinal))
-            throw new InvalidOperationException("Move tidal-rpc out of Downloads (for example to ~/Applications) and run it again.");
+            throw new InvalidOperationException("Drag TIDAL RPC to Applications, then open it from there.");
         Directory.CreateDirectory(Path.GetDirectoryName(PlistPath)!);
         Launchctl("bootout", $"gui/{getuid()}/{Label}");
         File.WriteAllText(PlistPath, CreatePlist(executable));

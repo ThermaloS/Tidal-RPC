@@ -28,6 +28,8 @@ internal static partial class Program
     {
         try
         {
+            // Opening TIDAL RPC from Finder passes no arguments; that means install and start, like `install` in Terminal.
+            if (args.Length == 0 && IsAppBundle()) return InstallFromApp();
             switch (args.FirstOrDefault())
             {
                 case "run": return Run();
@@ -59,6 +61,34 @@ internal static partial class Program
             Console.Error.WriteLine(ex is System.Text.Json.JsonException ? $"Couldn't read {MacSettingsStore.FilePath}." : ex.Message);
             return 1;
         }
+    }
+
+    private static bool IsAppBundle() => Environment.ProcessPath?.Contains(".app/Contents/MacOS/", StringComparison.Ordinal) == true;
+
+    private static int InstallFromApp()
+    {
+        try
+        {
+            if (!File.Exists(MacSettingsStore.FilePath)) MacSettingsStore.Save(new());
+            LaunchAgent.Install();
+            return 0;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            ShowAlert(ex.Message);
+            return 1;
+        }
+    }
+
+    // Finder launches have no Terminal to print to, so errors go in a dialog.
+    private static void ShowAlert(string message)
+    {
+        using var osascript = Process.Start(new ProcessStartInfo("/usr/bin/osascript")
+        {
+            UseShellExecute = false,
+            ArgumentList = { "-e", "on run argv", "-e", "display dialog (item 1 of argv) with title \"TIDAL RPC\" buttons {\"OK\"} default button 1", "-e", "end run", message }
+        });
+        osascript?.WaitForExit();
     }
 
     public static AppSettings Set(AppSettings s, string name, string value)
@@ -188,7 +218,7 @@ internal sealed class MacHost(EventLoop context) : IDisposable
         };
         playback.Diagnostic += text => { DebugConsole.Write("Playback", text); Log(text); mediaIssue = text; };
         _ = playback.StartAsync();
-        menu = new MenuBar(MenuState, ReportProblem, context.Complete);
+        menu = new MenuBar(MenuState, ReportProblem, context.Complete, RemoveFromLogin);
         timer = new Timer(_ => context.Post(_ => Tick(), null), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         Log($"TIDAL RPC {ReleaseConfiguration.Version} started");
     }
@@ -304,6 +334,14 @@ internal sealed class MacHost(EventLoop context) : IDisposable
     }
 
     private static string Shorten(string text) => text.Length > 70 ? text[..69] + "…" : text;
+
+    // Stops the background agent and removes it from login, so the app can be deleted without leaving it running.
+    private void RemoveFromLogin()
+    {
+        try { LaunchAgent.Uninstall(); }
+        catch (Exception ex) { Log($"Couldn't remove from login: {ex.GetType().Name}"); return; }
+        context.Complete();
+    }
 
     // Opens a prefilled GitHub issue with diagnostics. Song titles stay out unless the user adds them.
     private void ReportProblem()
